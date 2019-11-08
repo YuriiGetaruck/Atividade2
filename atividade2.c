@@ -8,6 +8,11 @@ typedef struct{
     int rrn;
 }Registro;  // struct usada para armazenar os ID e RRNs de cada cadastro
 
+typedef struct{
+    int id;
+    char nome[29];
+}SecundarioNome;
+
 int particiona(Registro *V, int inicio, int fim){  //funcao usada pela quicksort
 
     int esquerda = inicio;
@@ -66,42 +71,123 @@ void criaIndice(FILE *arq, int tamanho, Registro *vetor){  //funcao que cria o i
 
 
 
-void IndiceSecundarioNome(FILE *arq,FILE *arq2, int tamanho){ //funcao cria arquivo de indice secundario por nome fracamente ligado
+void IndiceSecundarioNome(int tamanho){ //funcao cria arquivo de indice secundario por nome fracamente ligado
 
-  char buffer_nome[29];
-  int buffer_id[3];
+  SecundarioNome vetor[tamanho];//utilizado para guardar o ID
 
-  int tamanho_campo_nome=29;//tamanho do campo "nome" no arquivo de dados
-  int tamanho_campo_id=4;
+  FILE *arq4;
+  FILE *arq5;
 
-  arq = fopen("indiceSecundario_NOME","w"); //cria o arquivo para escrita
+  char buffer_nome[29];//salva o nome temporariamente
+  char buffer_id[3];//salva o id temporariamente
 
-  arq2 = fopen("DadosPilotoID","r"); // abre o arquivo de indice para leitura
-
-  fseek(arq,0,SEEK_SET);
-  fseek(arq2,0,SEEK_SET);
-
-  for(int i = 0; i<tamanho*56; i++){
-    fseek(arq2,0,(SEEK_SET*i*56+4));//coloca o marcador ja no nome do piloto
-
-    for(int j=0; j<tamanho_campo_nome; j++){
-      fscanf(arq2,"%s",buffer_nome[j]);//salva o nome no buffer_nome
-    }
-    for(int j=0; j<tamanho_campo_id; j++){
-      fscanf(arq2,"%s",buffer_id[j]);//salva o id no buffer_id
-    }
-
-    fprintf(arq,"%s|",buffer_nome);
-    for(int k=0;k>tamanho_campo_nome;k++){
-    fprintf(arq,"%d",buffer_id[k]);
-    }
-    fprintf(arq,"\n");
+  arq4 = fopen("indiceSecundario_NOME.txt","w"); //cria o arquivo para escrita
+  if(arq4==NULL){
+  printf("n abriu aquivo\n");
   }
 
-  fflush(arq);
-  fclose(arq);
-  fclose(arq2);
+  arq5 = fopen("DadosPilotoID.txt","r"); // abre o arquivo de indice para leitura
+  if(arq5==NULL){
+  printf("n abriu aquivo\n");
+  }
 
+  fseek(arq4,0,SEEK_SET);//define o ponteiro do arquivo para seu incio
+  fseek(arq5,0,SEEK_SET);//define o ponteiro do arquivo para seu incio
+
+  for(int i = 0; i<tamanho; i++){//coleta os dados e imprime no aquivo
+    fread(buffer_id,4,1,arq5);
+    vetor[i].id=atoi(buffer_id);
+    fread(buffer_nome,29,1,arq5);
+    for(int j=0;j<29;j++){//retira caracter idesejado
+        buffer_nome[strcspn(buffer_nome, "#")] = '\0';
+    }//for
+    fprintf(arq4,"%s|%d\n",buffer_nome,vetor[i].id);
+    fseek(arq5, 23,SEEK_CUR);
+  }//for
+
+  fflush(arq4);//garante atualização do arquivo
+  fclose(arq4);//fecha o arquivo
+  fclose(arq5);//fecha o arquivo
+}
+
+void IndiceSecundarioPais(int tamanho){//função cria indice secundario por pais fortemente ligado, recebe apenas o tamanho como parametro
+    FILE *arq;
+    FILE *arq2;
+    char buffer[15];//salva temporariamente o pais
+
+    arq= fopen("IndiceSecundarioPais.txt","w");
+    arq2= fopen("entrada.txt","r");
+
+    fseek(arq2,33,SEEK_SET);//define a posição do ponteiro no arquivo para o pais
+    fseek(arq,0,SEEK_SET);//define a posição inicial no arquivo de escrita
+
+    for(int i = 0; i<tamanho+1; i++){//coleta e imprimi os dados no arquivo
+    fread(buffer,15,1,arq2);
+    fseek(arq2, 41,SEEK_CUR);
+    for(int j=0;j<15;j++){//retira caracter idesejado
+        buffer[strcspn(buffer, "#")] = '\0';
+    }
+    fprintf(arq,"%s|%d\n",buffer,i);
+  }
+
+    fflush(arq);//atualiza arquivo
+    fclose(arq);//fecha o arquivo
+    fclose(arq2);//fecha o arquivo
+}
+
+void listatodos(int tamanho){//lista todos os dados
+
+    FILE *arq;
+    arq = fopen("DadosPilotoID.txt","r");
+
+    char buffer_id[4];
+    char buffer_nome[29];
+    char buffer_pais[15];
+    char buffer_titulos[1];
+    char buffer_corridas[3];
+    char buffer_poles[2];
+    char buffer_vitorias[2];
+
+    int id,titulos,corridas,poles,vitorias;
+
+    fseek(arq,0,SEEK_SET);
+
+    printf("ID\tNome\tPais\tTitulos\tCorridas\tPoles\tVitorias\n");
+
+    for(int i=0; i<tamanho+1; i++){// imprime na tela do uuario os dados
+        fread(buffer_id,4,1,arq);
+        fread(buffer_nome,29,1,arq);
+        fread(buffer_pais,15,1,arq);
+        fread(buffer_titulos,1,1,arq);
+        fread(buffer_corridas,3,1,arq);
+        fread(buffer_poles,2,1,arq);
+        fread(buffer_vitorias,2,1,arq);
+
+        for(int j=0;j<29;j++){//limpa caracteres indesejados
+            buffer_nome[strcspn(buffer_nome, "#")] = '\0';
+            buffer_pais[strcspn(buffer_pais, "#")] = '\0';
+        }
+
+        for(int k=0;k<4;k++){//limpa caracteres indesejados
+            buffer_titulos[strcspn(buffer_titulos, "#")] = '\0';
+            buffer_corridas[strcspn(buffer_corridas, "#")] = '\0';
+            buffer_poles[strcspn(buffer_poles, "#")] = '\0';
+            buffer_vitorias[strcspn(buffer_vitorias, "#")] = '\0';
+        }
+
+
+        //converte os dados de char para int
+        id=atoi(buffer_id);
+        titulos=atoi(buffer_titulos);
+        corridas=atoi(buffer_corridas);
+        poles=atoi(buffer_poles);
+        vitorias=atoi(buffer_vitorias);
+
+
+        printf("%d %s|%s|%d|%d|%d|%d\n",id,buffer_nome,buffer_pais,titulos,corridas,poles,vitorias);
+    }
+
+    fclose(arq);//fecha arquivo
 }
 
 
@@ -159,7 +245,8 @@ int main(){
 
     //Tarefa 3 *****************************************************************
 
-    //IndiceSecundarioNome(arq3,arq2,tamanho_vetor);
+    IndiceSecundarioNome(tamanho_vetor);
+    IndiceSecundarioPais(tamanho_vetor);
 
     //**************************************************************************
 
@@ -172,7 +259,7 @@ int main(){
         switch (op)
         {
         case 1:
-
+            listatodos(tamanho_vetor);
         case 2:
 
             break;
